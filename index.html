@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Personal WakaTime Coding Statistics Dashboard">
+    <title>WakaTime Data Dashboard</title>
+    <!-- Import ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient-start: #0f172a;
+            --bg-gradient-end: #1e1b4b;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-glow: rgba(139, 92, 246, 0.5);
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+            background-size: 200% 200%;
+            animation: gradientBG 15s ease infinite;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .header {
+            width: 100%;
+            padding: 3vh 20px 2vh;
+            text-align: center;
+            flex-shrink: 0;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 38px;
+            font-weight: 800;
+            margin: 0;
+            background: -webkit-linear-gradient(45deg, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0px 4px 20px var(--accent-glow);
+            letter-spacing: -0.5px;
+        }
+
+        p.subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            font-weight: 300;
+            margin-top: 8px;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 2000px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-gap: 40px;
+            flex-grow: 1;
+            padding-bottom: 4vh;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 1000px) {
+
+            body,
+            html {
+                height: auto;
+                min-height: 100vh;
+                overflow: auto;
+            }
+
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .card {
+                height: 500px !important;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            height: 100%;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px 0 rgba(0, 0, 0, 0.4);
+            border-color: rgba(167, 139, 250, 0.3);
+        }
+
+        .chart {
+            width: 100%;
+            height: 100%;
+        }
+
+        .loading {
+            position: absolute;
+            font-size: 18px;
+            color: var(--text-secondary);
+            font-weight: 300;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: #a78bfa;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        #setup-message {
+            display: none;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 30px;
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+            max-width: 600px;
+            margin: auto;
+            box-shadow: 0 10px 30px -10px rgba(239, 68, 68, 0.2);
+        }
+
+        #setup-message h2 {
+            margin-top: 0;
+            color: #ef4444;
+        }
+
+        code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-family: monospace;
+            color: #a78bfa;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>Coding Activity Insights</h1>
+        <p class="subtitle">WakaTime Statistics powered by GitHub Gist & Actions</p>
+    </div>
+
+    <div id="setup-message">
+        <h2>Setup Required</h2>
+        <p>Please provide your Gist ID in the URL to load the data:</p>
+        <p><code>?gist=YOUR_GIST_ID</code></p>
+        <p>Example: <code>index.html?gist=1234567890abcdef</code></p>
+    </div>
+
+    <div class="container" id="charts-container" style="display: none;">
+        <div class="card">
+            <div id="loading-total" class="loading">
+                <div class="spinner"></div> Loading insights...
+            </div>
+            <div id="chart-total" class="chart"></div>
+        </div>
+        <div class="card">
+            <div id="loading-lang" class="loading">
+                <div class="spinner"></div> Crunching data...
+            </div>
+            <div id="chart-lang" class="chart"></div>
+        </div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        let gistId = params.get('gist');
+
+        if (!gistId) {
+            document.getElementById('setup-message').style.display = 'block';
+        } else {
+            document.getElementById('charts-container').style.display = 'grid';
+            loadData(gistId);
+        }
+
+        async function loadData(gistId) {
+            try {
+                const url = `https://api.github.com/gists/${gistId}`;
+                const response = await fetch(url);
+                const gist = await response.json();
+
+                if (!gist.files || !gist.files['wakatime-data.json']) {
+                    throw new Error('wakatime-data.json not found in gist');
+                }
+
+                const data = JSON.parse(gist.files['wakatime-data.json'].content);
+
+                document.getElementById('loading-total').style.display = 'none';
+                document.getElementById('loading-lang').style.display = 'none';
+
+                renderTotalTimeChart(data);
+                renderLanguageChart(data);
+
+            } catch (error) {
+                console.error("Error loading data:", error);
+                const errorHtml = '<span style="color: #fca5a5">Failed to load data</span>';
+                document.getElementById('loading-total').innerHTML = errorHtml;
+                document.getElementById('loading-lang').innerHTML = errorHtml;
+            }
+        }
+
+        function formatHours(seconds) {
+            return (seconds / 3600).toFixed(2);
+        }
+
+        const chartDarkTheme = {
+            textStyle: { fontFamily: 'Outfit, sans-serif' },
+            title: {
+                textStyle: { color: '#f8fafc', fontSize: 18, fontWeight: 600 },
+                left: 'center',
+                top: 10
+            },
+            tooltip: {
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                borderColor: 'rgba(255,255,255,0.1)',
+                textStyle: { color: '#f8fafc' },
+                padding: [12, 16],
+                borderRadius: 8
+            },
+            xAxis: {
+                axisLine: { lineStyle: { color: 'rgba(255,255,255,0.2)' } },
+                axisLabel: { color: '#94a3b8' }
+            },
+            yAxis: {
+                splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } },
+                axisLabel: { color: '#94a3b8' }
+            },
+            legend: {
+                textStyle: { color: '#94a3b8' },
+                bottom: 10
+            }
+        };
+
+        function renderTotalTimeChart(data) {
+            const chart = echarts.init(document.getElementById('chart-total'));
+            const option = {
+                ...chartDarkTheme,
+                title: { ...chartDarkTheme.title, text: 'Daily Total Time (Hours)' },
+                tooltip: {
+                    ...chartDarkTheme.tooltip,
+                    trigger: 'axis',
+                    valueFormatter: (value) => value + ' h'
+                },
+                grid: { top: 70, bottom: 40, left: 50, right: 30 },
+                xAxis: { ...chartDarkTheme.xAxis, type: 'category', data: data.dates, boundaryGap: false },
+                yAxis: { ...chartDarkTheme.yAxis, type: 'value' },
+                series: [
+                    {
+                        data: data.totalSeconds.map(formatHours),
+                        type: 'line',
+                        smooth: 0.4,
+                        symbol: 'circle',
+                        symbolSize: 8,
+                        itemStyle: {
+                            color: '#a78bfa',
+                            shadowColor: '#a78bfa',
+                            shadowBlur: 10
+                        },
+                        lineStyle: {
+                            width: 3,
+                            shadowColor: 'rgba(167, 139, 250, 0.3)',
+                            shadowBlur: 10,
+                            shadowOffsetY: 5
+                        },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(167, 139, 250, 0.5)' },
+                                { offset: 1, color: 'rgba(167, 139, 250, 0.05)' }
+                            ])
+                        }
+                    }
+                ]
+            };
+            chart.setOption(option);
+            window.addEventListener('resize', () => chart.resize());
+        }
+
+        function renderLanguageChart(data) {
+            const chart = echarts.init(document.getElementById('chart-lang'));
+
+            const langTotals = Object.keys(data.languages).map(lang => {
+                const total = data.languages[lang].reduce((a, b) => a + b, 0);
+                return { lang, total };
+            });
+            langTotals.sort((a, b) => b.total - a.total);
+            const topLangs = langTotals.slice(0, 5).map(l => l.lang);
+
+            const colors = ['#f472b6', '#a78bfa', '#60a5fa', '#34d399', '#fbbf24'];
+
+            const series = topLangs.map((lang, index) => {
+                return {
+                    name: lang,
+                    type: 'bar',
+                    stack: 'total',
+                    barWidth: '50%',
+                    itemStyle: {
+                        color: colors[index % colors.length],
+                        borderRadius: index === topLangs.length - 1 ? [4, 4, 0, 0] : 0
+                    },
+                    data: data.languages[lang].map(formatHours)
+                };
+            });
+
+            const option = {
+                ...chartDarkTheme,
+                title: { ...chartDarkTheme.title, text: 'Top 5 Languages Over Time' },
+                tooltip: {
+                    ...chartDarkTheme.tooltip,
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(255,255,255,0.05)' } },
+                    valueFormatter: (value) => value + ' h'
+                },
+                grid: { top: 70, bottom: 80, left: 50, right: 30 },
+                xAxis: { ...chartDarkTheme.xAxis, type: 'category', data: data.dates },
+                yAxis: { ...chartDarkTheme.yAxis, type: 'value' },
+                series: series
+            };
+            chart.setOption(option);
+            window.addEventListener('resize', () => chart.resize());
+        }
+    </script>
+</body>
+
+</html>
